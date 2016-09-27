@@ -1,0 +1,177 @@
+---
+title: "SI 618 Individual Project Report"
+author: "Shailesh Vedula"
+date: "April 13, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Motivation
+For this project I decided to do an exploratory data analysis of the New York City Taxi trips data. I chose the Yellow taxi trips data for January 2015. The motivation behind this project was to visualize how the traffic patterns are in a major city like New York. This is crucial in revealing the pricing mechanism of companies such as Uber. For example if the constantly heavy demand routes are known then Uber can implement surge pricing in that area by controlling the availability of taxis. Taxi service companies can use this type of analysis to develop customized service. It's with this motivation that I chose this project. The 4 specific questions that I decided to explore from this data set are
+1. How much time does it take to travel from midtown Manhattan to JFK and Newark airports.
+2. How many dropoffs have been made at Goldman Sachs.
+3. What does the late night (10 PM - 5 AM) taxi pickup activity looks like.
+4. What is the tipping trend.
+
+# Data source
+The data set that I have used for this project is the New York City Yellow taxi trip data for the month of January 2015. The data set is available at <http://www.nyc.gov/html/tlc/html/about/trip_record_data.shtml>. The data is in CSV format. The important variables are **pickup latitude**, **pickup longitude**, **fare amount**, **dropoff latitude**, **dropoff longitude**, **payment type**, **tip amount**, **pickup datetime**, **dropoff datetime**, **rate code id**, **passenger count**. All the variables are numeric type. The number of records that were retrieved is 12748986.
+
+# Methods
+1. The methods used was **subetting** and **Groupby** using **Pandas** in Python. The latitudes and longitudes were selected so as to cover Midtown Manhattan which approximately extends from 39th street to 52nd street. The records where there was missing data was excluded. The coordinates were set to represent midtown, Manhattan and JFK, Newark. Thereafter **parser.parse** from **dateutil** was used to extract the day and time of week when passengers were picked up from midtown and dropped at JFK, Newark. Once this was done groupby in pandas was used to group the records according to the day of the week and pickup hour. The results were then plotted suing **ggplot2**.
+Beyond using regex, there was no significant challenge.
+
+2. The latitude and longitude of Goldman Sachs was obtained from Google maps and the data was subsetted using **boolean masking** in **pandas**. The missing records were dropped using **drop.na** function in pandas. After this **groupby** function was used to group the records according to the dropoff hour. The challenges were to pinpoint the location of the building accurately. This was solved using Google maps.
+
+3. First the function **parser.parse** from **dateutil** was used to parse the pickup datetime to get the pickup hour. The data was then subsetted in **pandas** to get the desired records. After this the data was plotted using **ggmap**. The missing records were dropped using **drop.na** in pandas. The challenge in this was to figure out how to plot the contour plots using ggmap. I overcame this by reading the documentation of ggmap and watching tutorials on the internet. 
+
+4. In this also the data was subsetted using the **subset** function. The missing values were eliminated using the method described earlier. Only the data in which the payment method is by cash and credit card is included. Also the trips in which the fare amount is 0 are excluded since this suggests that the trip was cancelled. The results were then plotted using **ggplot2**. The challenge in this was to handle the large amount amount of data. All the data could not plotted in one graph because R kept hanging. I overcame this by dividing the data into 3 groups. 
+
+# Analysis and Results
+
+## Time taken to travel from midtown to JFK, Newark
+```{r cars,echo=FALSE}
+library('ggplot2')
+library('ggmap')
+```
+```{r jfk_day, echo=FALSE,fig.width=16,fig.align='center'}
+jfk_day=read.csv('mean_time_day_jfk.csv',header=T)
+jfk_day$pickup_day=factor(jfk_day$pickup_day,
+  levels=c('Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'))
+jfk_day=jfk_day[order(jfk_day$pickup_day),]
+
+graph1=ggplot(jfk_day,aes(pickup_day,mean_time))+
+  geom_bar(stat='identity',width=0.9)+
+  ggtitle('Average time to reach JFK international airport')+
+  labs(x='Day',y='Average time taken in minutes')+
+  theme(axis.text.x=element_text(angle=60,vjust=0.5))
+print (graph1)
+```
+
+It can be seen that on Monday and Friday it takes the longest to reach JFK airport. The average time taken is around 45 minutes. This might probably be because people are flying to meet their families on Friday and are returning on Monday. Moreover the time taken in constant. The lowest time is taken on Sunday and Saturday which fits in with the above hypothesis. On rest of days the time taken is constant and in between  the above two cases. 
+
+```{r jfk_hour, echo=FALSE,fig.width=16,fig.align='center'}
+jfk_hour=read.csv('mean_time_hour_jfk.csv',header=T)
+jfk_hour=jfk_hour[order(jfk_hour$pickup_hour),]
+
+graph2=ggplot(jfk_hour,aes(pickup_hour,mean_time))+
+  geom_line()+
+  ggtitle('Average time to reach JFK international airport')+
+  labs(x='Pickup hour in 24 hour format',y='Average time taken in minutes')+
+  theme(axis.text.x=element_text(vjust=0.5))
+print (graph2)
+```
+
+It can be seen that the peak hour is at 3 PM. While the lowest IS between 11 and 12 PM. The average time taken rises from early morning and reaches peak at 3 PM and then drops. 
+
+```{r newark_day, echo=FALSE,fig.width=16,fig.align='center'}
+newark_day=read.csv('mean_time_day_newark.csv',header=T)
+newark_day$pickup_day=factor(newark_day$pickup_day,
+                          levels=c('Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'))
+newark_day=newark_day[order(newark_day$pickup_day),]
+
+graph3=ggplot(newark_day,aes(pickup_day,mean_time))+
+  geom_bar(stat='identity',width=0.9)+
+  ggtitle('Average time to reach Newark airport')+
+  labs(x='Day',y='Average time taken in minutes')+
+  theme(axis.text.x=element_text(angle=60,vjust=0.5))
+print (graph3)
+```
+
+The time taken to reach Newark airport remains almost constant on all days.
+
+```{r newark_hour, echo=FALSE,fig.width=16,fig.align='center'}
+newark_hour=read.csv('mean_time_hour_newark.csv',header=T)
+newark_data1=newark_hour[newark_hour$pickup_hour==22,]
+
+graph4=ggplot(newark_hour,aes(pickup_hour,mean_time))+
+  geom_line(stat='identity')+
+  ggtitle('Average time to reach Newark airport')+
+  labs(x='Pickup hour in 24 hour format',y='Average time taken in minutes')+
+  theme(axis.text.x=element_text(vjust=0.5))
+print (graph4)
+```
+
+The peak time to travel to Newark airport is between 3-4 PM and takes around 40 minutes on an average. The lowest time taken is in the early hours of morning. This is expected since in the early hours there is not much traffic.
+
+## Late night (10 PM - 5 AM) taxi activity
+```{r latenight, echo=FALSE,message=FALSE,fig.width=6,fig.height=6,warning=FALSE,fig.align='center'}
+latenight_data=read.csv('latenight_tripdata.csv',header=T)
+latenight_data=latenight_data[order(latenight_data$pickup_hour),]
+
+nyc=get_map(location = 'New York City', zoom = 13,source='google')
+ggmap(nyc)+geom_density2d(data =latenight_data, aes(x=pickup_longitude, 
+      y = pickup_latitude),size=0.3) +
+      stat_density2d(data = latenight_data, 
+      aes(x =pickup_longitude, y = pickup_latitude, 
+      fill = ..level.., alpha = ..level..), size = 0.05,bins = 20, geom = "polygon")+
+      scale_fill_gradient(low = "yellow", high = "red")+
+      scale_alpha(range = c(0, 0.5), guide = FALSE)+
+      labs(y ='Latitude', x ='Longitude')+
+      ggtitle('Pickup Activity between 10 PM - 5 AM ')
+```
+
+## Number of dropoffs at Goldman Sachs
+```{r goldman_sachs, echo=FALSE,fig.width=16,fig.align='center'}
+goldman=read.csv('goldman_sachs.csv',header=T)
+
+graph7=ggplot(goldman,aes(dropoff_hour,total_dropoffs))+
+  geom_bar(stat='identity',width=0.97)+
+  ggtitle('Total number of dropoffs at Goldman Sachs')+
+  labs(x='Dropoff hour',y='Total number of dropoffs')+
+  theme(axis.text.x=element_text(angle=60,vjust=0.5))
+print (graph7)
+```
+
+The most number of dropoffs are made between 7-10 AM. This is expected because that is the time when people are commuting for work.
+
+## Tipping trend
+Here 1= Credit card payment and 2= cash payment
+
+```{r tip10, echo=FALSE,fig.align='center'}
+tips=read.csv('tip.csv',header=T)
+tips=subset(tips,(payment_type==1 | payment_type==2))
+data1=subset(tips,fare_amount>=1 & fare_amount<10)
+
+graph6=ggplot(data1,aes(fare_amount,tip_amount))+
+       stat_binhex()+geom_smooth(method=lm,se=F,color='green')+
+       ggtitle('Tipping Trend')+labs(x='Fare amount in Dollars', y='Tip amount')+
+       theme(axis.text.x=element_text(vjust=0.5))+facet_wrap(~payment_type)
+print (graph6)
+```
+
+```{r tip20, echo=FALSE,fig.align='center'}
+data2=subset(tips,fare_amount>=10 & fare_amount<20)
+
+graph61=ggplot(data2,aes(fare_amount,tip_amount))+
+  stat_binhex()+geom_smooth(method=lm,se=F,color='green')+
+  ggtitle('Tipping Trend')+labs(x='Fare amount in Dollars', y='Tip amount')+
+  theme(axis.text.x=element_text(vjust=0.5))+facet_wrap(~payment_type)
+print (graph61)
+```
+
+```{r tip30, echo=FALSE,fig.align='center'}
+data3=subset(tips,fare_amount>=20 & tip_amount<600)
+
+graph62=ggplot(data3,aes(fare_amount,tip_amount))+
+  stat_binhex()+geom_smooth(method=lm,se=F,color='green')+
+  ggtitle('Tipping Trend')+labs(x='Fare amount in Dollars', y='Tip amount')+
+  theme(axis.text.x=element_text(vjust=0.5))+facet_wrap(~payment_type)
+print (graph62)
+```
+
+We can see that people who have paid by cash do not tip at all. While people who pay by credit car tip well. There are outliers in the credit card case with tips being very high. One can hazard a guess that they are very wealthy people.
+
+
+
+
+
+
+
+
+
+
+
+
